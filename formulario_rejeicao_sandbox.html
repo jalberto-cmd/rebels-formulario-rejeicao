@@ -248,6 +248,10 @@
   const params  = new URLSearchParams(window.location.search);
   const reqId   = params.get("req_id")  || "";
   const token   = params.get("token")   || "";
+  // Textos pré-calculados pelo formulário de origem (NF vs normal) — apenas repassados
+  const assuntoResultado = params.get("assunto_resultado") || "";
+  const linhaDecisao     = params.get("linha_decisao")     || "";
+  const label            = params.get("label")             || "";
 
   document.getElementById("display-req-id").textContent = reqId || "—";
   document.getElementById("success-req-id").textContent = reqId || "—";
@@ -271,7 +275,7 @@
     btn.textContent = "Enviando…";
     document.getElementById("error-msg").style.display = "none";
 
-    const url = `${WEBHOOK_URL}?req_id=${encodeURIComponent(reqId)}&decisao=rejeitado&token=${encodeURIComponent(token)}&motivo=${encodeURIComponent(motivo)}`;
+    const url = `${WEBHOOK_URL}?req_id=${encodeURIComponent(reqId)}&decisao=rejeitado&token=${encodeURIComponent(token)}&motivo=${encodeURIComponent(motivo)}&assunto_resultado=${encodeURIComponent(assuntoResultado)}&linha_decisao=${encodeURIComponent(linhaDecisao)}&label=${encodeURIComponent(label)}`;
 
     try {
       const res = await fetch(url, { method: "GET" });
