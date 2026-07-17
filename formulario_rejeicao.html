@@ -252,6 +252,7 @@
   const assuntoResultado = params.get("assunto_resultado") || "";
   const linhaDecisao     = params.get("linha_decisao")     || "";
   const label            = params.get("label")             || "";
+  const linhaParcelamento = params.get("linha_parcelamento") || "";
 
   document.getElementById("display-req-id").textContent = reqId || "—";
   document.getElementById("success-req-id").textContent = reqId || "—";
@@ -275,7 +276,7 @@
     btn.textContent = "Enviando…";
     document.getElementById("error-msg").style.display = "none";
 
-    const url = `${WEBHOOK_URL}?req_id=${encodeURIComponent(reqId)}&decisao=rejeitado&token=${encodeURIComponent(token)}&motivo=${encodeURIComponent(motivo)}&assunto_resultado=${encodeURIComponent(assuntoResultado)}&linha_decisao=${encodeURIComponent(linhaDecisao)}&label=${encodeURIComponent(label)}`;
+    const url = `${WEBHOOK_URL}?req_id=${encodeURIComponent(reqId)}&decisao=rejeitado&token=${encodeURIComponent(token)}&motivo=${encodeURIComponent(motivo)}&assunto_resultado=${encodeURIComponent(assuntoResultado)}&linha_decisao=${encodeURIComponent(linhaDecisao)}&label=${encodeURIComponent(label)}&linha_parcelamento=${encodeURIComponent(linhaParcelamento)}`;
 
     try {
       const res = await fetch(url, { method: "GET" });
