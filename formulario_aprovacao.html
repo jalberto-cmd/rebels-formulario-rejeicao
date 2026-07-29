@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Confirmar Aprovação — Rebels CA</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -154,6 +155,36 @@
       color: #cf1322;
       margin-top: 16px;
     }
+
+    /* Verificação de identidade (Google Sign-In) */
+    .auth-box {
+      border: 1.5px dashed #d9d9d9;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+
+    .auth-label {
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    #google-status {
+      font-size: 13px;
+      color: #15803d;
+      font-weight: 600;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .auth-warn {
+      font-size: 12px;
+      color: #999;
+      margin-top: 8px;
+    }
   </style>
 </head>
 <body>
@@ -175,13 +206,24 @@
       de fato o aprovador responsável por esta Unidade de Negócio.
     </p>
 
+    <div class="auth-box">
+      <div class="auth-label">Confirme sua identidade para habilitar a aprovação</div>
+      <div id="g_id_signin"></div>
+      <div id="google-status">✓ Conectado como <span id="google-email"></span></div>
+      <div class="auth-warn">A aprovação só é registrada se o e-mail conferir com o aprovador cadastrado nesta requisição.</div>
+    </div>
+
     <div class="actions">
       <button type="button" class="btn-cancel" onclick="window.close()">Cancelar</button>
-      <button type="button" class="btn-confirm" id="btn-submit" onclick="submitApproval()">Confirmar Aprovação</button>
+      <button type="button" class="btn-confirm" id="btn-submit" onclick="submitApproval()" disabled>Confirmar Aprovação</button>
     </div>
 
     <div class="error-msg" id="error-msg">
       Erro ao registrar a aprovação. Tente novamente ou entre em contato com o suporte.
+    </div>
+
+    <div class="error-msg" id="error-msg-unauthorized" style="display:none;">
+      ❌ <strong>Você não é o aprovador desta requisição.</strong> Nenhuma alteração foi feita.
     </div>
   </div>
 
@@ -199,6 +241,7 @@
 <script>
   // ── Configuração ──────────────────────────────────────────────────────────
   const WEBHOOK_URL = "https://hook.us2.make.com/32w89uyn3yu3dn7swopwg77ac6yc92oo";
+  const GOOGLE_CLIENT_ID = "182272385104-hlfcslu5eur7tg0kpu5bkrrivfme297t.apps.googleusercontent.com";
 
   // ── Lê parâmetros da URL ──────────────────────────────────────────────────
   const params  = new URLSearchParams(window.location.search);
@@ -214,18 +257,69 @@
   document.getElementById("display-req-id").textContent = reqId || "—";
   document.getElementById("success-req-id").textContent = reqId || "—";
 
+  // ── Login Google (identidade de quem está confirmando) ───────────────────
+  // Importante: o e-mail exibido aqui é só para feedback visual imediato.
+  // A validação de verdade (o e-mail bate com o aprovador cadastrado na
+  // requisição) acontece no Make, verificando a assinatura do id_token
+  // direto com o Google — nunca confiar em nada decodificado aqui no cliente.
+  let googleIdToken = null;
+
+  function parseJwtPayload(jwt) {
+    try {
+      const base64 = jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      return JSON.parse(decodeURIComponent(escape(atob(base64))));
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function handleCredentialResponse(response) {
+    googleIdToken = response.credential;
+    const payload = parseJwtPayload(googleIdToken);
+    document.getElementById("google-email").textContent = payload.email || "(e-mail não identificado)";
+    document.getElementById("google-status").style.display = "block";
+    document.getElementById("btn-submit").disabled = false;
+  }
+
+  window.onload = function () {
+    if (window.google && google.accounts && google.accounts.id) {
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleCredentialResponse,
+      });
+      google.accounts.id.renderButton(
+        document.getElementById("g_id_signin"),
+        { theme: "outline", size: "large", text: "signin_with", locale: "pt-BR" }
+      );
+    }
+  };
+
   // ── Submissão ─────────────────────────────────────────────────────────────
   async function submitApproval() {
+    if (!googleIdToken) {
+      document.getElementById("error-msg").textContent = "Faça login com o Google acima antes de confirmar.";
+      document.getElementById("error-msg").style.display = "block";
+      return;
+    }
+
     const btn = document.getElementById("btn-submit");
     btn.disabled = true;
     btn.classList.add("loading");
     btn.textContent = "Enviando…";
     document.getElementById("error-msg").style.display = "none";
+    document.getElementById("error-msg-unauthorized").style.display = "none";
 
-    const url = `${WEBHOOK_URL}?req_id=${encodeURIComponent(reqId)}&decisao=aprovado&token=${encodeURIComponent(token)}&row=${encodeURIComponent(row)}&assunto_resultado=${encodeURIComponent(assuntoResultado)}&linha_decisao=${encodeURIComponent(linhaDecisao)}&label=${encodeURIComponent(label)}&linha_parcelamento=${encodeURIComponent(linhaParcelamento)}`;
+    const url = `${WEBHOOK_URL}?req_id=${encodeURIComponent(reqId)}&decisao=aprovado&token=${encodeURIComponent(token)}&row=${encodeURIComponent(row)}&assunto_resultado=${encodeURIComponent(assuntoResultado)}&linha_decisao=${encodeURIComponent(linhaDecisao)}&label=${encodeURIComponent(label)}&linha_parcelamento=${encodeURIComponent(linhaParcelamento)}&id_token=${encodeURIComponent(googleIdToken)}`;
 
     try {
       const res = await fetch(url, { method: "GET" });
+      if (res.status === 403) {
+        btn.disabled = false;
+        btn.classList.remove("loading");
+        btn.textContent = "Confirmar Aprovação";
+        document.getElementById("error-msg-unauthorized").style.display = "block";
+        return;
+      }
       if (res.ok || res.status === 200) {
         document.getElementById("form-screen").style.display    = "none";
         document.getElementById("success-screen").style.display = "block";
