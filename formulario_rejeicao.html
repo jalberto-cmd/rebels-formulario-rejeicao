@@ -231,14 +231,14 @@
   <div id="form-screen">
     <div class="badge-reject">
       <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#cf1322" stroke-width="1.5"/><line x1="5" y1="5" x2="11" y2="11" stroke="#cf1322" stroke-width="1.5" stroke-linecap="round"/><line x1="11" y1="5" x2="5" y2="11" stroke="#cf1322" stroke-width="1.5" stroke-linecap="round"/></svg>
-      Rejeição de Requisição
+      <span id="badge-text">Rejeição de Requisição</span>
     </div>
 
-    <h1>Informe o motivo da rejeição</h1>
+    <h1 id="titulo-form">Informe o motivo da rejeição</h1>
     <p class="req-id">Requisição: <strong id="display-req-id">—</strong></p>
 
     <form id="rejection-form" onsubmit="submitRejection(event)">
-      <label for="motivo">Motivo <span class="required">*</span></label>
+      <label for="motivo"><span id="label-motivo">Motivo</span> <span class="required">*</span></label>
       <textarea
         id="motivo"
         name="motivo"
@@ -253,7 +253,7 @@
         <div class="auth-label">Confirme sua identidade para habilitar a rejeição</div>
         <div id="g_id_signin"></div>
         <div id="google-status">✓ Conectado como <span id="google-email"></span></div>
-        <div class="auth-warn">A rejeição só é registrada se o e-mail conferir com o aprovador cadastrado nesta requisição.</div>
+        <div class="auth-warn" id="auth-warn-text">A rejeição só é registrada se o e-mail conferir com o aprovador cadastrado nesta requisição.</div>
       </div>
 
       <div class="actions">
@@ -263,7 +263,7 @@
     </form>
 
     <div class="error-msg" id="error-msg">
-      Erro ao registrar a rejeição. Tente novamente ou entre em contato com o suporte.
+      Erro ao registrar. Tente novamente ou entre em contato com o suporte.
     </div>
 
     <div class="error-msg" id="error-msg-unauthorized" style="display:none;">
@@ -274,8 +274,8 @@
   <!-- Tela de sucesso -->
   <div class="success-screen" id="success-screen">
     <div class="success-icon">✅</div>
-    <h2>Rejeição registrada</h2>
-    <p>
+    <h2 id="sucesso-titulo">Rejeição registrada</h2>
+    <p id="sucesso-texto">
       A requisição <strong id="success-req-id"></strong> foi rejeitada.<br>
       O requerente será notificado por e-mail com o motivo informado.
     </p>
@@ -296,9 +296,35 @@
   const linhaDecisao     = params.get("linha_decisao")     || "";
   const label            = params.get("label")             || "";
   const linhaParcelamento = params.get("linha_parcelamento") || "";
+  // is_nf: flag repassada pelo formulário de origem (Is_Emissao_NF_Ativa) — indica se esta
+  // página foi aberta a partir do botão "❌ Solicitar mais informação" (contexto de emissão de
+  // NF) em vez de "❌ REJEITAR" normal. Decisão enviada ao Make continua "rejeitado" nos 2
+  // casos (não muda comportamento/backend) — só o texto exibido na tela muda.
+  const isNF = params.get("is_nf") === "true";
 
   document.getElementById("display-req-id").textContent = reqId || "—";
   document.getElementById("success-req-id").textContent = reqId || "—";
+
+  // ── Textos condicionais (NF vs normal) ────────────────────────────────────
+  const TEXTOS_BTN_SUBMIT = isNF ? "Enviar Solicitação" : "Confirmar Rejeição";
+
+  function aplicarTextoContexto() {
+    if (!isNF) return; // textos padrão do HTML já cobrem o caso normal
+    document.title = "Solicitar Mais Informação — Rebels CA";
+    document.getElementById("badge-text").textContent = "Solicitação de Mais Informação";
+    document.getElementById("titulo-form").textContent = "Que informação está faltando?";
+    document.getElementById("label-motivo").textContent = "Informação necessária";
+    document.getElementById("motivo").placeholder =
+      "Descreva a informação que falta para prosseguir com a emissão da NF…";
+    document.getElementById("auth-warn-text").textContent =
+      "O envio só é registrado se o e-mail conferir com o aprovador cadastrado nesta requisição.";
+    document.getElementById("btn-submit").textContent = TEXTOS_BTN_SUBMIT;
+    document.getElementById("sucesso-titulo").textContent = "Solicitação enviada";
+    document.getElementById("sucesso-texto").innerHTML =
+      'A requisição <strong id="success-req-id">' + (reqId || "—") + '</strong> teve mais informação solicitada.<br>' +
+      'O requerente será notificado por e-mail com o que foi informado.';
+  }
+  aplicarTextoContexto();
 
   // ── Contador de caracteres ────────────────────────────────────────────────
   function updateCharCount() {
@@ -370,7 +396,7 @@
       if (res.status === 403) {
         btn.disabled = false;
         btn.classList.remove("loading");
-        btn.textContent = "Confirmar Rejeição";
+        btn.textContent = TEXTOS_BTN_SUBMIT;
         document.getElementById("error-msg-unauthorized").style.display = "block";
         return;
       }
@@ -383,7 +409,7 @@
     } catch (err) {
       btn.disabled = false;
       btn.classList.remove("loading");
-      btn.textContent = "Confirmar Rejeição";
+      btn.textContent = TEXTOS_BTN_SUBMIT;
       document.getElementById("error-msg").style.display = "block";
       console.error("Erro:", err);
     }
