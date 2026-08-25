@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>[TESTE] Confirmar Aprovação + Anexo PDF — Rebels CA</title>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f4f5f7;
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+    }
+
+    .card {
+      background: #fff;
+      border-radius: 12px;
+      box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+      max-width: 520px;
+      width: 100%;
+      padding: 40px 40px 36px;
+    }
+
+    .logo {
+      font-size: 13px;
+      font-weight: 600;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #999;
+      margin-bottom: 8px;
+    }
+
+    .test-banner {
+      background: #fffbe6;
+      border: 1px solid #ffe58f;
+      color: #874d00;
+      font-size: 12px;
+      font-weight: 600;
+      border-radius: 6px;
+      padding: 6px 10px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .badge-approve {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #f0fdf4;
+      border: 1px solid #86efac;
+      color: #15803d;
+      font-weight: 600;
+      font-size: 13px;
+      border-radius: 6px;
+      padding: 5px 12px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+
+    .req-id {
+      font-size: 14px;
+      color: #666;
+      margin-bottom: 28px;
+    }
+
+    .req-id strong {
+      color: #1a1a2e;
+      font-weight: 600;
+    }
+
+    p.helper {
+      font-size: 14px;
+      color: #555;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    /* Upload de PDF */
+    .upload-box {
+      border: 1.5px dashed #d9d9d9;
+      border-radius: 8px;
+      padding: 18px 16px;
+      margin-bottom: 20px;
+    }
+
+    .upload-label {
+      font-size: 13px;
+      color: #555;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .upload-label .req-star { color: #cf1322; }
+
+    input[type="file"] {
+      font-size: 13px;
+      width: 100%;
+    }
+
+    .upload-status {
+      font-size: 13px;
+      color: #15803d;
+      font-weight: 600;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .upload-error {
+      font-size: 12px;
+      color: #cf1322;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .upload-hint {
+      font-size: 12px;
+      color: #999;
+      margin-top: 8px;
+    }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+    }
+
+    .btn-cancel {
+      flex: 1;
+      padding: 12px 0;
+      border: 1.5px solid #d9d9d9;
+      border-radius: 8px;
+      background: #fff;
+      color: #555;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s, border-color 0.2s;
+    }
+
+    .btn-cancel:hover { background: #f5f5f5; border-color: #bbb; }
+
+    .btn-confirm {
+      flex: 2;
+      padding: 12px 0;
+      border: none;
+      border-radius: 8px;
+      background: #16a34a;
+      color: #fff;
+      font-size: 14px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .btn-confirm:hover  { background: #15803d; }
+    .btn-confirm:active { transform: scale(0.98); }
+    .btn-confirm:disabled { background: #bbf0cf; cursor: not-allowed; }
+
+    /* Estado de loading */
+    .btn-confirm.loading {
+      background: #15803d;
+      cursor: not-allowed;
+    }
+
+    /* Tela de sucesso */
+    .success-screen {
+      display: none;
+      text-align: center;
+      padding: 16px 0 8px;
+    }
+
+    .success-icon {
+      font-size: 56px;
+      margin-bottom: 16px;
+    }
+
+    .success-screen h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: #1a1a2e;
+      margin-bottom: 10px;
+    }
+
+    .success-screen p {
+      font-size: 14px;
+      color: #666;
+      line-height: 1.6;
+    }
+
+    /* Tela de erro */
+    .error-msg {
+      display: none;
+      background: #fff1f0;
+      border: 1px solid #ffa39e;
+      border-radius: 8px;
+      padding: 12px 14px;
+      font-size: 13px;
+      color: #cf1322;
+      margin-top: 16px;
+    }
+
+    /* Verificação de identidade (Google Sign-In) */
+    .auth-box {
+      border: 1.5px dashed #d9d9d9;
+      border-radius: 8px;
+      padding: 16px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .auth-label {
+      font-size: 13px;
+      color: #555;
+      margin-bottom: 12px;
+      font-weight: 600;
+    }
+
+    #google-status {
+      font-size: 13px;
+      color: #15803d;
+      font-weight: 600;
+      margin-top: 10px;
+      display: none;
+    }
+
+    .auth-warn {
+      font-size: 12px;
+      color: #999;
+      margin-top: 8px;
+    }
+  </style>
+</head>
+<body>
+
+<div class="card">
+  <div class="logo">Rebels — Financeiro &amp; Controladoria</div>
+  <div class="test-banner">⚠️ AMBIENTE DE TESTE — não usar em produção. Escreve apenas na planilha/scenario de teste.</div>
+
+  <!-- Tela de confirmação -->
+  <div id="form-screen">
+    <div class="badge-approve">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="8" cy="8" r="7" stroke="#15803d" stroke-width="1.5"/><path d="M5 8.5L7 10.5L11 6" stroke="#15803d" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      Aprovação de Requisição (NF)
+    </div>
+
+    <h1>Confirmar aprovação desta requisição?</h1>
+    <p class="req-id">Requisição: <strong id="display-req-id">—</strong></p>
+    <p class="helper">
+      Esta ação aprova a requisição para emissão de nota fiscal. Só confirme se você é
+      de fato o aprovador responsável por esta Unidade de Negócio.
+    </p>
+
+    <div class="upload-box">
+      <label class="upload-label" for="pdf-input">Anexar PDF da Nota Fiscal <span class="req-star">*</span></label>
+      <input type="file" id="pdf-input" accept="application/pdf,.pdf" />
+      <div class="upload-status" id="upload-status">✓ Arquivo selecionado: <span id="upload-filename"></span></div>
+      <div class="upload-error" id="upload-error">O arquivo deve ser um PDF.</div>
+      <div class="upload-hint">Obrigatório. Apenas arquivos .pdf são aceitos.</div>
+    </div>
+
+    <div class="auth-box">
+      <div class="auth-label">Confirme sua identidade para habilitar a aprovação</div>
+      <div id="g_id_signin"></div>
+      <div id="google-status">✓ Conectado como <span id="google-email"></span></div>
+      <div class="auth-warn">A aprovação só é registrada se o e-mail conferir com o aprovador cadastrado nesta requisição.</div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn-cancel" onclick="window.close()">Cancelar</button>
+      <button type="button" class="btn-confirm" id="btn-submit" onclick="submitApproval()" disabled>Confirmar Aprovação</button>
+    </div>
+
+    <div class="error-msg" id="error-msg">
+      Erro ao registrar a aprovação. Tente novamente ou entre em contato com o suporte.
+    </div>
+
+    <div class="error-msg" id="error-msg-unauthorized" style="display:none;">
+      ❌ <strong>Você não é o aprovador desta requisição.</strong> Nenhuma alteração foi feita.
+    </div>
+  </div>
+
+  <!-- Tela de sucesso -->
+  <div class="success-screen" id="success-screen">
+    <div class="success-icon">✅</div>
+    <h2>Requisição aprovada</h2>
+    <p>
+      A requisição <strong id="success-req-id"></strong> foi aprovada e o PDF foi enviado.<br>
+      O requerente será notificado por e-mail com a nota anexada.
+    </p>
+  </div>
+</div>
+
+<script>
+  // ── Configuração (AMBIENTE DE TESTE — webhook isolado, não é o de produção) ─
+  const WEBHOOK_URL = "https://hook.us2.make.com/ffxb0ysr4kx0jkf6y7wt6wo8vpk4t13c";
+  const GOOGLE_CLIENT_ID = "182272385104-hlfcslu5eur7tg0kpu5bkrrivfme297t.apps.googleusercontent.com";
+
+  // ── Lê parâmetros da URL ──────────────────────────────────────────────────
+  const params  = new URLSearchParams(window.location.search);
+  const reqId   = params.get("req_id")  || "";
+  const token   = params.get("token")   || "";
+  const row     = params.get("row")     || "";
+  const assuntoResultado  = params.get("assunto_resultado")  || "";
+  const linhaDecisao      = params.get("linha_decisao")      || "";
+  const label             = params.get("label")              || "";
+  const linhaParcelamento = params.get("linha_parcelamento") || "";
+
+  document.getElementById("display-req-id").textContent = reqId || "—";
+  document.getElementById("success-req-id").textContent = reqId || "—";
+
+  // ── Upload de PDF ─────────────────────────────────────────────────────────
+  let selectedFile = null;
+  const pdfInput = document.getElementById("pdf-input");
+
+  pdfInput.addEventListener("change", function () {
+    const file = pdfInput.files[0];
+    document.getElementById("upload-error").style.display = "none";
+    document.getElementById("upload-status").style.display = "none";
+
+    if (!file) {
+      selectedFile = null;
+      return;
+    }
+
+    const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+    if (!isPdf) {
+      selectedFile = null;
+      pdfInput.value = "";
+      document.getElementById("upload-error").style.display = "block";
+      return;
+    }
+
+    selectedFile = file;
+    document.getElementById("upload-filename").textContent = file.name;
+    document.getElementById("upload-status").style.display = "block";
+  });
+
+  // ── Login Google (identidade de quem está confirmando) ───────────────────
+  // O e-mail exibido aqui é só feedback visual imediato. A validação real
+  // (o e-mail bate com o aprovador cadastrado) acontece no Make, verificando
+  // a assinatura do id_token direto com o Google.
+  let googleIdToken = null;
+
+  function parseJwtPayload(jwt) {
+    try {
+      const base64 = jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/");
+      return JSON.parse(decodeURIComponent(escape(atob(base64))));
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function handleCredentialResponse(response) {
+    googleIdToken = response.credential;
+    const payload = parseJwtPayload(googleIdToken);
+    document.getElementById("google-email").textContent = payload.email || "(e-mail não identificado)";
+    document.getElementById("google-status").style.display = "block";
+    document.getElementById("btn-submit").disabled = false;
+  }
+
+  window.onload = function () {
+    if (window.google && google.accounts && google.accounts.id) {
+      google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleCredentialResponse,
+      });
+      google.accounts.id.renderButton(
+        document.getElementById("g_id_signin"),
+        { theme: "outline", size: "large", text: "signin_with", locale: "pt-BR" }
+      );
+    }
+  };
+
+  // ── Submissão (POST multipart/form-data com o PDF) ──────────────────────
+  async function submitApproval() {
+    if (!googleIdToken) {
+      document.getElementById("error-msg").textContent = "Faça login com o Google acima antes de confirmar.";
+      document.getElementById("error-msg").style.display = "block";
+      return;
+    }
+
+    if (!selectedFile) {
+      document.getElementById("error-msg").textContent = "Anexe o PDF da nota fiscal antes de confirmar.";
+      document.getElementById("error-msg").style.display = "block";
+      return;
+    }
+
+    const btn = document.getElementById("btn-submit");
+    btn.disabled = true;
+    btn.classList.add("loading");
+    btn.textContent = "Enviando…";
+    document.getElementById("error-msg").style.display = "none";
+    document.getElementById("error-msg-unauthorized").style.display = "none";
+
+    const formData = new FormData();
+    formData.append("req_id", reqId);
+    formData.append("decisao", "aprovado");
+    formData.append("token", token);
+    formData.append("row", row);
+    formData.append("assunto_resultado", assuntoResultado);
+    formData.append("linha_decisao", linhaDecisao);
+    formData.append("label", label);
+    formData.append("linha_parcelamento", linhaParcelamento);
+    formData.append("id_token", googleIdToken);
+    formData.append("pdf_nf", selectedFile, selectedFile.name);
+
+    try {
+      // Tenta primeiro em modo normal (permite ler status/403 de não-autorizado).
+      let res;
+      let readable = true;
+      try {
+        res = await fetch(WEBHOOK_URL, { method: "POST", body: formData });
+      } catch (corsErr) {
+        // Fallback: alguns navegadores bloqueiam a leitura da resposta de um
+        // POST multipart cross-origin. Reenvia em modo "no-cors": a requisição
+        // é entregue normalmente, mas não conseguimos ler o status de volta.
+        readable = false;
+        await fetch(WEBHOOK_URL, { method: "POST", body: formData, mode: "no-cors" });
+      }
+
+      if (readable && res && res.status === 403) {
+        btn.disabled = false;
+        btn.classList.remove("loading");
+        btn.textContent = "Confirmar Aprovação";
+        document.getElementById("error-msg-unauthorized").style.display = "block";
+        return;
+      }
+      if (!readable || res.ok || res.status === 200) {
+        document.getElementById("form-screen").style.display    = "none";
+        document.getElementById("success-screen").style.display = "block";
+      } else {
+        throw new Error(`HTTP ${res.status}`);
+      }
+    } catch (err) {
+      btn.disabled = false;
+      btn.classList.remove("loading");
+      btn.textContent = "Confirmar Aprovação";
+      document.getElementById("error-msg").style.display = "block";
+      console.error("Erro:", err);
+    }
+  }
+</script>
+
+</body>
+</html>
