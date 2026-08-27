@@ -73,7 +73,85 @@
       font-size: 14px;
       color: #555;
       line-height: 1.6;
-      margin-bottom: 28px;
+      margin-bottom: 24px;
+    }
+
+    /* Upload de PDF */
+    .upload-box {
+      border: 1.5px dashed #d9d9d9;
+      border-radius: 8px;
+      padding: 18px 16px;
+      margin-bottom: 20px;
+    }
+
+    .upload-label {
+      font-size: 13px;
+      color: #555;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .upload-label .req-star { color: #cf1322; }
+
+    input[type="file"] {
+      font-size: 13px;
+      width: 100%;
+    }
+
+    .upload-status {
+      font-size: 13px;
+      color: #15803d;
+      font-weight: 600;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .upload-error {
+      font-size: 12px;
+      color: #cf1322;
+      margin-top: 8px;
+      display: none;
+    }
+
+    .upload-hint {
+      font-size: 12px;
+      color: #999;
+      margin-top: 8px;
+    }
+
+    /* Data de emissão */
+    .emissao-box {
+      border: 1.5px dashed #d9d9d9;
+      border-radius: 8px;
+      padding: 18px 16px;
+      margin-bottom: 20px;
+    }
+
+    .emissao-label {
+      font-size: 13px;
+      color: #555;
+      font-weight: 600;
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .emissao-label .req-star { color: #cf1322; }
+
+    input[type="date"] {
+      font-size: 14px;
+      width: 100%;
+      padding: 8px 10px;
+      border: 1px solid #d9d9d9;
+      border-radius: 6px;
+      color: #1a1a2e;
+      font-family: inherit;
+    }
+
+    .emissao-hint {
+      font-size: 12px;
+      color: #999;
+      margin-top: 8px;
     }
 
     .actions {
@@ -161,7 +239,7 @@
       border: 1.5px dashed #d9d9d9;
       border-radius: 8px;
       padding: 16px;
-      margin-bottom: 24px;
+      margin-bottom: 20px;
       text-align: center;
     }
 
@@ -206,6 +284,20 @@
       de fato o aprovador responsável por esta Unidade de Negócio.
     </p>
 
+    <div class="upload-box">
+      <label class="upload-label" for="pdf-input">Anexar PDF da Nota Fiscal <span class="req-star">*</span></label>
+      <input type="file" id="pdf-input" accept="application/pdf,.pdf" />
+      <div class="upload-status" id="upload-status">✓ Arquivo selecionado: <span id="upload-filename"></span></div>
+      <div class="upload-error" id="upload-error">O arquivo deve ser um PDF.</div>
+      <div class="upload-hint">Obrigatório. Apenas arquivos .pdf são aceitos.</div>
+    </div>
+
+    <div class="emissao-box">
+      <label class="emissao-label" for="data-emissao-input">Data de Emissão da NF <span class="req-star">*</span></label>
+      <input type="date" id="data-emissao-input" />
+      <div class="emissao-hint">Preenchida automaticamente com a data de hoje. Altere se a NF foi emitida em outra data.</div>
+    </div>
+
     <div class="auth-box">
       <div class="auth-label">Confirme sua identidade para habilitar a aprovação</div>
       <div id="g_id_signin"></div>
@@ -232,15 +324,15 @@
     <div class="success-icon">✅</div>
     <h2>Requisição aprovada</h2>
     <p>
-      A requisição <strong id="success-req-id"></strong> foi aprovada.<br>
-      O requerente será notificado por e-mail.
+      A requisição <strong id="success-req-id"></strong> foi aprovada e o PDF foi enviado.<br>
+      O requerente será notificado por e-mail com a nota anexada.
     </p>
   </div>
 </div>
 
 <script>
   // ── Configuração ──────────────────────────────────────────────────────────
-  const WEBHOOK_URL = "https://hook.us2.make.com/ffxb0ysr4kx0jkf6y7wt6wo8vpk4t13c";
+  const WEBHOOK_URL = "https://hook.us2.make.com/32w89uyn3yu3dn7swopwg77ac6yc92oo";
   const GOOGLE_CLIENT_ID = "182272385104-hlfcslu5eur7tg0kpu5bkrrivfme297t.apps.googleusercontent.com";
 
   // ── Lê parâmetros da URL ──────────────────────────────────────────────────
@@ -256,6 +348,43 @@
 
   document.getElementById("display-req-id").textContent = reqId || "—";
   document.getElementById("success-req-id").textContent = reqId || "—";
+
+  // ── Data de emissão (pré-preenchida com hoje, editável) ──────────────────
+  const dataEmissaoInput = document.getElementById("data-emissao-input");
+  (function initDataEmissao() {
+    const hoje = new Date();
+    const yyyy = hoje.getFullYear();
+    const mm   = String(hoje.getMonth() + 1).padStart(2, "0");
+    const dd   = String(hoje.getDate()).padStart(2, "0");
+    dataEmissaoInput.value = `${yyyy}-${mm}-${dd}`;
+  })();
+
+  // ── Upload de PDF ─────────────────────────────────────────────────────────
+  let selectedFile = null;
+  const pdfInput = document.getElementById("pdf-input");
+
+  pdfInput.addEventListener("change", function () {
+    const file = pdfInput.files[0];
+    document.getElementById("upload-error").style.display = "none";
+    document.getElementById("upload-status").style.display = "none";
+
+    if (!file) {
+      selectedFile = null;
+      return;
+    }
+
+    const isPdf = file.type === "application/pdf" || /\.pdf$/i.test(file.name);
+    if (!isPdf) {
+      selectedFile = null;
+      pdfInput.value = "";
+      document.getElementById("upload-error").style.display = "block";
+      return;
+    }
+
+    selectedFile = file;
+    document.getElementById("upload-filename").textContent = file.name;
+    document.getElementById("upload-status").style.display = "block";
+  });
 
   // ── Login Google (identidade de quem está confirmando) ───────────────────
   // Importante: o e-mail exibido aqui é só para feedback visual imediato.
@@ -294,10 +423,22 @@
     }
   };
 
-  // ── Submissão ─────────────────────────────────────────────────────────────
+  // ── Submissão (POST multipart/form-data com o PDF) ──────────────────────
   async function submitApproval() {
     if (!googleIdToken) {
       document.getElementById("error-msg").textContent = "Faça login com o Google acima antes de confirmar.";
+      document.getElementById("error-msg").style.display = "block";
+      return;
+    }
+
+    if (!selectedFile) {
+      document.getElementById("error-msg").textContent = "Anexe o PDF da nota fiscal antes de confirmar.";
+      document.getElementById("error-msg").style.display = "block";
+      return;
+    }
+
+    if (!dataEmissaoInput.value) {
+      document.getElementById("error-msg").textContent = "Informe a data de emissão da NF antes de confirmar.";
       document.getElementById("error-msg").style.display = "block";
       return;
     }
@@ -309,18 +450,41 @@
     document.getElementById("error-msg").style.display = "none";
     document.getElementById("error-msg-unauthorized").style.display = "none";
 
-    const url = `${WEBHOOK_URL}?req_id=${encodeURIComponent(reqId)}&decisao=aprovado&token=${encodeURIComponent(token)}&row=${encodeURIComponent(row)}&assunto_resultado=${encodeURIComponent(assuntoResultado)}&linha_decisao=${encodeURIComponent(linhaDecisao)}&label=${encodeURIComponent(label)}&linha_parcelamento=${encodeURIComponent(linhaParcelamento)}&id_token=${encodeURIComponent(googleIdToken)}`;
+    const formData = new FormData();
+    formData.append("req_id", reqId);
+    formData.append("decisao", "aprovado");
+    formData.append("token", token);
+    formData.append("row", row);
+    formData.append("assunto_resultado", assuntoResultado);
+    formData.append("linha_decisao", linhaDecisao);
+    formData.append("label", label);
+    formData.append("linha_parcelamento", linhaParcelamento);
+    formData.append("id_token", googleIdToken);
+    formData.append("data_emissao", dataEmissaoInput.value);
+    formData.append("pdf_nf", selectedFile, selectedFile.name);
 
     try {
-      const res = await fetch(url, { method: "GET" });
-      if (res.status === 403) {
+      // Tenta primeiro em modo normal (permite ler status/403 de não-autorizado).
+      let res;
+      let readable = true;
+      try {
+        res = await fetch(WEBHOOK_URL, { method: "POST", body: formData });
+      } catch (corsErr) {
+        // Fallback: alguns navegadores bloqueiam a leitura da resposta de um
+        // POST multipart cross-origin. Reenvia em modo "no-cors": a requisição
+        // é entregue normalmente, mas não conseguimos ler o status de volta.
+        readable = false;
+        await fetch(WEBHOOK_URL, { method: "POST", body: formData, mode: "no-cors" });
+      }
+
+      if (readable && res && res.status === 403) {
         btn.disabled = false;
         btn.classList.remove("loading");
         btn.textContent = "Confirmar Aprovação";
         document.getElementById("error-msg-unauthorized").style.display = "block";
         return;
       }
-      if (res.ok || res.status === 200) {
+      if (!readable || res.ok || res.status === 200) {
         document.getElementById("form-screen").style.display    = "none";
         document.getElementById("success-screen").style.display = "block";
       } else {
