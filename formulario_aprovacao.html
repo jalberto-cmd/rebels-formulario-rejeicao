@@ -284,7 +284,7 @@
       de fato o aprovador responsável por esta Unidade de Negócio.
     </p>
 
-    <div class="upload-box">
+    <div class="upload-box" id="upload-box">
       <label class="upload-label" for="pdf-input">Anexar PDF da Nota Fiscal <span class="req-star">*</span></label>
       <input type="file" id="pdf-input" accept="application/pdf,.pdf" />
       <div class="upload-status" id="upload-status">✓ Arquivo selecionado: <span id="upload-filename"></span></div>
@@ -292,7 +292,7 @@
       <div class="upload-hint">Obrigatório. Apenas arquivos .pdf são aceitos.</div>
     </div>
 
-    <div class="emissao-box">
+    <div class="emissao-box" id="emissao-box">
       <label class="emissao-label" for="data-emissao-input">Data de Emissão da NF <span class="req-star">*</span></label>
       <input type="date" id="data-emissao-input" />
       <div class="emissao-hint">Preenchida automaticamente com a data de hoje. Altere se a NF foi emitida em outra data.</div>
@@ -323,7 +323,7 @@
   <div class="success-screen" id="success-screen">
     <div class="success-icon">✅</div>
     <h2>Requisição aprovada</h2>
-    <p>
+    <p id="success-text">
       A requisição <strong id="success-req-id"></strong> foi aprovada e o PDF foi enviado.<br>
       O requerente será notificado por e-mail com a nota anexada.
     </p>
@@ -346,8 +346,18 @@
   const label             = params.get("label")              || "";
   const linhaParcelamento = params.get("linha_parcelamento") || "";
 
+  // Diferencia "Confirmação de emissão de NF" de uma aprovação comum de despesa.
+  const isEmissaoNfAtiva = params.get("is_emissao_nf_ativa") || "";
+  const nfFlow = isEmissaoNfAtiva.trim().toUpperCase() === "SIM";
+
   document.getElementById("display-req-id").textContent = reqId || "—";
   document.getElementById("success-req-id").textContent = reqId || "—";
+
+  // ── Aprovação comum: esconde upload de PDF e data de emissão ─────────────
+  if (!nfFlow) {
+    document.getElementById("upload-box").style.display  = "none";
+    document.getElementById("emissao-box").style.display = "none";
+  }
 
   // ── Data de emissão (pré-preenchida com hoje, editável) ──────────────────
   const dataEmissaoInput = document.getElementById("data-emissao-input");
@@ -431,13 +441,13 @@
       return;
     }
 
-    if (!selectedFile) {
+    if (nfFlow && !selectedFile) {
       document.getElementById("error-msg").textContent = "Anexe o PDF da nota fiscal antes de confirmar.";
       document.getElementById("error-msg").style.display = "block";
       return;
     }
 
-    if (!dataEmissaoInput.value) {
+    if (nfFlow && !dataEmissaoInput.value) {
       document.getElementById("error-msg").textContent = "Informe a data de emissão da NF antes de confirmar.";
       document.getElementById("error-msg").style.display = "block";
       return;
@@ -460,8 +470,13 @@
     formData.append("label", label);
     formData.append("linha_parcelamento", linhaParcelamento);
     formData.append("id_token", googleIdToken);
+    formData.append("is_emissao_nf_ativa", nfFlow ? "SIM" : "NÃO");
+    // Data de emissão: sempre enviada (mesmo em aprovação comum, silenciosamente,
+    // com a data de hoje) para manter Exportado_CA protegendo contra reprocessamento.
     formData.append("data_emissao", dataEmissaoInput.value);
-    formData.append("pdf_nf", selectedFile, selectedFile.name);
+    if (selectedFile) {
+      formData.append("pdf_nf", selectedFile, selectedFile.name);
+    }
 
     try {
       // Tenta primeiro em modo normal (permite ler status/403 de não-autorizado).
@@ -485,6 +500,11 @@
         return;
       }
       if (!readable || res.ok || res.status === 200) {
+        if (!nfFlow) {
+          document.getElementById("success-text").innerHTML =
+            'A requisição <strong id="success-req-id">' + (reqId || "—") + '</strong> foi aprovada.<br>' +
+            'O requerente será notificado por e-mail.';
+        }
         document.getElementById("form-screen").style.display    = "none";
         document.getElementById("success-screen").style.display = "block";
       } else {
